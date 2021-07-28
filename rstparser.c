@@ -7,6 +7,8 @@
 
 #include "static_list.h"
 #include "list.h"
+#define XXH_INLINE_ALL
+#include "xxhash/xxhash.h"
 
 #if _POSIX_C_SOURCE < 200809L && !defined(_GNU_SOURCE)
     #include "getline.h"
@@ -146,21 +148,14 @@ StringHashList* load_rst_hashes(const char* path, int hash_bits)
     size_t allocatedLength = 0;
     ssize_t lineLength;
     while ( (lineLength = getline(&currentLine, &allocatedLength, hashesFile)) != -1) {
-        if (currentLine[lineLength-1] == '\n') currentLine[lineLength-1] = '\0';
-        if (lineLength >= 2 && currentLine[lineLength-2] == '\r') currentLine[lineLength-2] = '\0'; // windows line endings urgh
+        if (currentLine[lineLength-1] == '\n') currentLine[--lineLength] = '\0';
+        if (lineLength > 0 && currentLine[lineLength-1] == '\r') currentLine[--lineLength] = '\0'; // windows line endings urgh
         char* afterHash;
         uint64_t hash = strtoull(currentLine, &afterHash, 16);
         char* name;
         if (afterHash == currentLine || *afterHash != ' ') { // heuristic detection of string only lines, should work 100%
             name = currentLine;
-            // TODO: add xxhash (64) algorithm and calculate it of `name` here
-            // hash =
-            fprintf(stderr, "Error: Hashfiles without hashes are currently not supported.\n");
-            free(hashList->objects);
-            free(hashList);
-            free(currentLine);
-            fclose(hashesFile);
-            return NULL;
+            hash = XXH64(currentLine, lineLength, 0);
         } else {
             name = afterHash;
             while (*name == ' ') name++;
