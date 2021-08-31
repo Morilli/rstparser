@@ -75,6 +75,7 @@ RstFile* parse_rst_file(const char* input_path)
         }
         case 3: break;
         case 4:
+        case 5:
             rstFile->hash_bits = 39;
             break;
         default:
@@ -89,7 +90,8 @@ RstFile* parse_rst_file(const char* input_path)
     for (uint32_t i = 0; i < entry_count; i++) {
         assert(fread(&rstFile->entries.objects[i].offset_and_hash, 8, 1, inputFile) == 1);
     }
-    fseek(inputFile, 1, SEEK_CUR);
+    if (rstFile->version < 5)
+        fseek(inputFile, 1, SEEK_CUR);
     size_t data_size = fileSize - ftell(inputFile);
     uint8_t* data = malloc(data_size);
     assert(fread(data, 1, data_size, inputFile) == data_size);
